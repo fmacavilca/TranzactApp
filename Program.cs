@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -16,10 +17,12 @@ namespace TranzactApp
         static void Main(string[] args)
         {
             Console.WriteLine("Loading...");
-            GetDataFromWikiMedia();          
+
+
+            GetDataFromWikiMedia();
         }
 
-        
+
         public static void GetDataFromWikiMedia()
         {
             string url = "https://dumps.wikimedia.org/other/pageviews/";
@@ -52,14 +55,14 @@ namespace TranzactApp
             //Print Result
             foreach (All_Hours var in Final_list)
             {
-                Console.WriteLine(var.DOMAIN_CODE + " " + var.PAGETITLE + " " + var.COUNTS_VIEWS);           
+                Console.WriteLine(var.DOMAIN_CODE + " " + var.PAGETITLE + " " + var.COUNTS_VIEWS);
 
             }
 
         }
         public static string GetHtmlLinkString(string url)
         {
-            StreamReader reader =null;
+            StreamReader reader = null;
             try
             {
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
@@ -71,7 +74,7 @@ namespace TranzactApp
             {
                 Console.WriteLine(ex.ToString());
             }
-            
+
             return reader.ReadToEnd();
 
         }
@@ -89,7 +92,7 @@ namespace TranzactApp
                     {
                         //Console.WriteLine(match.Groups[1].Value);
                         if (match.Groups[1].Value.Contains(condition))
-                            result= match.Groups[1].Value;
+                            result = match.Groups[1].Value;
                     }
 
                 }
@@ -98,35 +101,47 @@ namespace TranzactApp
 
         }
 
+        public static string GetDateFormatFromString(string obj)
+        {
+            string date = obj.Split('-')[1];
+            string hour = obj.Split('-')[2].Substring(0, 2) + ":" + obj.Split('-')[2].Substring(2, 2);
+            string a = date + " " + hour;
+            var result = DateTime.ParseExact(a,
+                                  "yyyyMMdd HH:mm",
+                                   CultureInfo.InvariantCulture);
+
+            return result.ToString();
+        }
         public static List<DirectoryListTemp> GetListFromWeb(string condition, string regexpattern, string html)
         {
             Regex regex = new Regex(regexpattern);
             MatchCollection matches = regex.Matches(html);
             List<DirectoryListTemp> result = new List<DirectoryListTemp>();
-            
+
             if (matches.Count > 0)
             {
                 foreach (Match match in matches)
                 {
                     DirectoryListTemp temp = new DirectoryListTemp();
                     if (match.Success)
-                    {                        
+                    {
                         if (match.Groups[1].Value.Contains(condition))
                         {
                             temp.zip = match.Groups[1].Value;
-                            temp.time = match.Groups[2].Value.TrimStart().Split(' ')[0]+" "+ match.Groups[2].Value.TrimStart().Split(' ')[1];
-                            temp.hour=match.Groups[2].Value.TrimStart().Split(' ')[1];
+                            //temp.time = match.Groups[2].Value.TrimStart().Split(' ')[0]+" "+ match.Groups[2].Value.TrimStart().Split(' ')[1]; IN CASE NEED TO USE FILE CREATION
+                            temp.time = GetDateFormatFromString(match.Groups[1].Value);
+                            temp.hour = match.Groups[2].Value.TrimStart().Split(' ')[1];
                             result.Add(temp);
-                           
+
                         }
-                            
+
                     }
-                    
+
                 }
             }
-            
+
             return result;
-           
+
         }
 
         public static List<All_Hours> GetFinalData(List<DirectoryListTemp> obj, string url, DateTime today)
@@ -153,16 +168,16 @@ namespace TranzactApp
                         All_Hours tmp_allhours = new All_Hours();
                         tmp_allhours.DOMAIN_CODE = line.Split(' ')[0];
                         tmp_allhours.PAGETITLE = line.Split(' ')[1];
-                        tmp_allhours.COUNTS_VIEWS = Convert.ToInt32(line.Split(' ')[2]);                        
+                        tmp_allhours.COUNTS_VIEWS = Convert.ToInt32(line.Split(' ')[2]);
                         temp_ListAllHour.Add(tmp_allhours);
                     }
-                }               
+                }
                 var final_data = temp_ListAllHour
                     .GroupBy(d => new { d.DOMAIN_CODE, d.PAGETITLE })
                     .Select(x => new { x.Key.DOMAIN_CODE, x.Key.PAGETITLE, COUNTS_VIEWS = x.Sum(s => s.COUNTS_VIEWS) })
                     .OrderByDescending(x => x.COUNTS_VIEWS)
                     .Take(100)
-                    .ToList();               
+                    .ToList();
 
                 foreach (var val in final_data)
                 {
@@ -179,7 +194,7 @@ namespace TranzactApp
             {
                 Console.WriteLine(ex.Message);
             }
-            
+
             return result;
         }
     }
